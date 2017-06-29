@@ -1,0 +1,42 @@
+version: "2.0"
+services:
+  golang:
+    image: "golang:1.7.5"
+    volumes:
+      # We should need to volume our go/src, everything should be vendored
+      # - ${GOPATH}/src:/go/src
+      - .:/go/src/github.com/nowk/limon
+      - /go/bin
+      - /go/pkg
+    working_dir: /go/src/github.com/nowk/limon
+
+  go:
+    extends:
+      service: golang
+    volumes_from:
+      - golang
+    volumes:
+      - ~/.ssh:/root/.ssh
+    entrypoint: go
+    env_file: .env-file
+    environment:
+      - INSTANCE_ID=abcdefg
+      - AUTOSCALING_GROUP_NAME=strawbery
+      - INSTANCE_TYPE=linux/ubuntu
+      - IMAGE_ID=123
+
+  # install `go get -u github.com/kardianos/govendor`
+  govendor:
+    extends:
+      service: golang
+    volumes_from:
+      - golang
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - ./.gitconfig:/root/.gitconfig
+      - ${SSH_AUTH_SOCK}:${SSH_AUTH_SOCK}
+    entrypoint: govendor
+    environment:
+      # set our SSH_AUTH_SOCK env, for ssh-agent
+      - SSH_AUTH_SOCK=${SSH_AUTH_SOCK}
+
