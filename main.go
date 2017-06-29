@@ -34,6 +34,19 @@ func gb(val uint64) uint64 {
 	return val / GIGA
 }
 
+// check outputs an error to stderr and exits the process if true
+func check(err error, exit bool) {
+	if err == nil {
+		return
+	}
+
+	fmt.Fprintf(os.Stderr, "[error] %s", err)
+
+	if exit {
+		os.Exit(1)
+	}
+}
+
 var (
 	aws_access_key_id     string
 	aws_secret_access_key string
@@ -69,11 +82,12 @@ func init() {
 }
 
 func main() {
-	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
-	if _, err := creds.Get(); err != nil {
-		fmt.Fprintf(os.Stderr, "[error] %s", err)
-		os.Exit(1)
-	}
+	var (
+		creds  = credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
+		_, err = creds.Get()
+	)
+	check(err, true)
+
 	var (
 		cfg = aws.NewConfig().WithRegion("us-east-1").WithCredentials(creds)
 		cw  = cloudwatch.New(session.New(), cfg)
@@ -104,13 +118,11 @@ func main() {
 				memUtil = 100 * mem.Used / mem.Total
 			}
 
-			input := (&cloudwatch.PutMetricDataInput{}).
-				SetNamespace(namespace).
-				SetMetricData([]*cloudwatch.MetricDatum{
-					newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dim...),
-					newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dim...),
-					newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dim...),
-				})
+			input := newInput(namespace,
+				newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dim...),
+				newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dim...),
+				newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dim...),
+			)
 
 			_, err := cw.PutMetricData(input)
 			check(err, true) // TODO how to handle error putting metric data, should we just kill the process?
@@ -118,19 +130,6 @@ func main() {
 			// TODO output should mirror metrics
 			fmt.Fprintf(os.Stdout, "mem:  %d%% %10d %10d %10d\n", memUtil, mb(mem.Total), mb(mem.Used), mb(mem.Free))
 		}
-	}
-}
-
-// check outputs an error to stderr and exits the process if true
-func check(err error, exit bool) {
-	if err == nil {
-		return
-	}
-
-	fmt.Fprintf(os.Stderr, "[error] %s", err)
-
-	if exit {
-		os.Exit(1)
 	}
 }
 
@@ -150,4 +149,14 @@ func newDim(name, value string) *cloudwatch.Dimension {
 	return (&cloudwatch.Dimension{}).
 		SetName(name).
 		SetValue(value)
+}
+
+// newInput returns a new cloudwatch.PutMetricDataInput
+func newInput(
+	ns string, datum ...*cloudwatch.MetricDatum) *cloudwatch.PutMetricDataInput {
+
+	return (&cloudwatch.PutMetricDataInput{}).
+		SetNamespace(ns).
+		SetMetricData(datum)
+
 }
