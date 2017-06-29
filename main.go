@@ -108,6 +108,8 @@ func main() {
 		memUtil uint64
 	)
 
+	fmt.Fprintf(os.Stdout, "%-20s %-19s   %-20s %s\n", "MetricName", "Timestamp", "Unit", "Value")
+
 	for {
 		select {
 		case _ = <-poll.C:
@@ -126,9 +128,6 @@ func main() {
 
 			_, err := cw.PutMetricData(input)
 			check(err, true) // TODO how to handle error putting metric data, should we just kill the process?
-
-			// TODO output should mirror metrics
-			fmt.Fprintf(os.Stdout, "mem:  %d%% %10d %10d %10d\n", memUtil, mb(mem.Total), mb(mem.Used), mb(mem.Free))
 		}
 	}
 }
@@ -136,6 +135,9 @@ func main() {
 // newMetric returns a new cloudwatch.MetricDatum
 func newMetric(
 	name string, t time.Time, unit string, value float64, dim ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
+
+	fmt.Fprintf(os.Stdout, "%-20s %d   %-20s %0.3f\n", name, t.UnixNano(), unit, value)
+
 	return (&cloudwatch.MetricDatum{}).
 		SetMetricName(name).
 		SetTimestamp(t).
