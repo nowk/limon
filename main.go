@@ -50,6 +50,7 @@ func check(err error, exit bool) {
 var (
 	aws_access_key_id     string
 	aws_secret_access_key string
+	aws_region            string
 	// TODO aws_iam_role string
 
 	instance_id            string
@@ -68,6 +69,7 @@ var (
 func init() {
 	nflag.StringVar(&aws_access_key_id, "AWS_ACCESS_KEY_ID", "aws-access-key-id", "", "Specifies the AWS access key ID to use to identify the caller.")
 	nflag.StringVar(&aws_secret_access_key, "AWS_SECRET_ACCESS_KEY", "aws-secret-access-key", "", "Specifies the AWS secret key to use to sign the request.")
+	nflag.StringVar(&aws_region, "AWS_REGION", "aws-region", "us-east-1", "Specifies the AWS region.")
 
 	nflag.StringVar(&instance_id, "INSTANCE_ID", "instance-id", "", "Specifies the InstanceId")
 	nflag.StringVar(&autoscaling_group_name, "AUTOSCALING_GROUP_NAME", "autoscaling-group-name", "", "Specifies the AutoScalingGroupName")
@@ -89,7 +91,7 @@ func main() {
 	check(err, true)
 
 	var (
-		cfg = aws.NewConfig().WithRegion("us-east-1").WithCredentials(creds)
+		cfg = aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
 		cw  = cloudwatch.New(session.New(), cfg)
 	)
 
