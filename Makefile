@@ -27,7 +27,7 @@ push:
 
 
 all:
-	@$(MAKE) -s limon
+	@$(MAKE) -s
 	@$(MAKE) -s build
 .PHONY: all
 
