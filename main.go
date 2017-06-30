@@ -112,25 +112,22 @@ func main() {
 
 	fmt.Fprintf(os.Stdout, "%-20s %-19s   %-20s %s\n", "MetricName", "Timestamp", "Unit", "Value")
 
-	for {
-		select {
-		case _ = <-poll.C:
-			check(mem.Get(), true)
+	for _ = range poll.C {
+		check(mem.Get(), true)
 
-			// calculate memory utilization
-			if mem.Total > 0 {
-				memUtil = 100 * mem.Used / mem.Total
-			}
-
-			input := newInput(namespace,
-				newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dims...),
-				newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dims...),
-				newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dims...),
-			)
-
-			_, err := cw.PutMetricData(input)
-			check(err, true) // TODO how to handle error putting metric data, should we just kill the process?
+		// calculate memory utilization
+		if mem.Total > 0 {
+			memUtil = 100 * mem.Used / mem.Total
 		}
+
+		input := newInput(namespace,
+			newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dims...),
+			newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dims...),
+			newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dims...),
+		)
+
+		_, err := cw.PutMetricData(input)
+		check(err, true) // TODO how to handle error putting metric data, should we just kill the process?
 	}
 }
 
