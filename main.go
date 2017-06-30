@@ -96,12 +96,12 @@ func main() {
 	)
 
 	// dimensions for our metrics
-	dim := []*cloudwatch.Dimension{
+	dims := dimsOnly(
 		newDim("InstanceId", instance_id),
 		newDim("AutoScalingGroupName", autoscaling_group_name),
 		newDim("InstanceType", instance_type),
 		newDim("ImageId", image_id),
-	}
+	)
 
 	var (
 		mem  = sigar.Mem{}
@@ -123,9 +123,9 @@ func main() {
 			}
 
 			input := newInput(namespace,
-				newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dim...),
-				newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dim...),
-				newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dim...),
+				newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dims...),
+				newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dims...),
+				newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dims...),
 			)
 
 			_, err := cw.PutMetricData(input)
@@ -136,7 +136,7 @@ func main() {
 
 // newMetric returns a new cloudwatch.MetricDatum
 func newMetric(
-	name string, t time.Time, unit string, value float64, dim ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
+	name string, t time.Time, unit string, value float64, dims ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
 
 	fmt.Fprintf(os.Stdout, "%-20s %d   %-20s %0.3f\n", name, t.UnixNano(), unit, value)
 
@@ -145,11 +145,30 @@ func newMetric(
 		SetTimestamp(t).
 		SetUnit(unit).
 		SetValue(value).
-		SetDimensions(dim)
+		SetDimensions(dims)
 }
 
-// newDim returns a new cloudwatch.Dimension
+// dimsOnly pops out nil and returns only valid dimensions
+func dimsOnly(in ...*cloudwatch.Dimension) []*cloudwatch.Dimension {
+	var out []*cloudwatch.Dimension
+
+	for _, v := range in {
+		if v == nil {
+			continue
+		}
+
+		out = append(out, v)
+	}
+
+	return out
+}
+
+// newDim returns a new cloudwatch.Dimension. empty values will return nil
 func newDim(name, value string) *cloudwatch.Dimension {
+	if value == "" {
+		return nil
+	}
+
 	return (&cloudwatch.Dimension{}).
 		SetName(name).
 		SetValue(value)
