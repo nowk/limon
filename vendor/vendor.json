@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "YLP5feE+is+DaWUrnBUoMsfvLD8=",
+			"path": "github.com/apex/log",
+			"revision": "8f3a15d95392c8fc202d1e1059f46df21dff2992",
+			"revisionTime": "2017-05-21T20:54:26Z"
+		},
+		{
 			"checksumSHA1": "WdKcQfOcrwtFUImASqW5K0vosaw=",
 			"path": "github.com/aws/aws-sdk-go",
 			"revision": "d187e501f592487c8eda9d3d75af3a2ca7a593d9",
@@ -175,6 +181,12 @@
 			"path": "github.com/nowk/nflag",
 			"revision": "a9c2ece40eb0a591d73c3d252fcf6e037295f048",
 			"revisionTime": "2014-12-24T04:00:20Z"
+		},
+		{
+			"checksumSHA1": "rJab1YdNhQooDiBWNnt7TLWPyBU=",
+			"path": "github.com/pkg/errors",
+			"revision": "c605e284fe17294bda444b34710735b29d1a9d90",
+			"revisionTime": "2017-05-05T04:36:39Z"
 		}
 	],
 	"rootPath": "github.com/nowk/limon"

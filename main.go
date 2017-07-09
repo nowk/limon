@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"time"
 
+	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -40,7 +40,7 @@ func check(err error, exit bool) {
 		return
 	}
 
-	fmt.Fprintf(os.Stderr, "[error] %s", err)
+	log.WithError(err).Error("Error")
 
 	if exit {
 		os.Exit(1)
@@ -110,8 +110,6 @@ func main() {
 		memUtil uint64
 	)
 
-	fmt.Fprintf(os.Stdout, "%-20s %-19s   %-20s %s\n", "MetricName", "Timestamp", "Unit", "Value")
-
 	for _ = range poll.C {
 		check(mem.Get(), true)
 
@@ -135,7 +133,12 @@ func main() {
 func newMetric(
 	name string, t time.Time, unit string, value float64, dims ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
 
-	fmt.Fprintf(os.Stdout, "%-20s %d   %-20s %0.3f\n", name, t.UnixNano(), unit, value)
+	log.WithFields(log.Fields{
+		"name":      name,
+		"timestamp": t,
+		"unit":      unit,
+		"value":     value,
+	}).Info("New Metric")
 
 	return (&cloudwatch.MetricDatum{}).
 		SetMetricName(name).
