@@ -231,6 +231,8 @@ func (m *MemoryMetric) Put(util, used, free uint64) (err error) {
 	return
 }
 
+// convertValueByUnit converts the value by supported unit. Bytes and Percent
+// unit types will be returned unconverted
 func convertValueByUnit(unit string, value uint64) float64 {
 	var v uint64
 	switch unit {
