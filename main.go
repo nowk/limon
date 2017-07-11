@@ -152,7 +152,7 @@ func main() {
 	unit, err := parseMemoryUnit(memory_unit)
 	check(err, "memory unit", true)
 
-	mm := &MemoryMetric{
+	metric := &MemoryMetric{
 		cw:         cw,
 		namespace:  namespace,
 		memoryUnit: unit,
@@ -172,7 +172,7 @@ func main() {
 			memUtil = 100 * mem.Used / mem.Total
 		}
 
-		err := mm.Put(
+		err := metric.Put(
 			memUtil,
 			mem.Used,
 			mem.Free,
