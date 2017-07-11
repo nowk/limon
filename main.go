@@ -117,16 +117,12 @@ func init() {
 func main() {
 	kingpin.Parse()
 
-	var (
-		creds  = credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
-		_, err = creds.Get()
-	)
+	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
+	_, err := creds.Get()
 	check(err, "credentials", true)
 
-	var (
-		cfg = aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
-		cw  = cloudwatch.New(session.New(), cfg)
-	)
+	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
+	cw := cloudwatch.New(session.New(), cfg)
 
 	// dimensions for our metrics
 	dims := dimsOnly(
