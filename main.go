@@ -105,14 +105,18 @@ func main() {
 
 	log.WithField("namespace", namespace).Info("start")
 
-	var (
-		mem  = sigar.Mem{}
-		poll = time.NewTicker(time.Duration(period) * time.Second)
+	mem := sigar.Mem{}
+	tic := time.NewTicker(time.Duration(period) * time.Second)
 
-		memUtil uint64
-	)
+	mm := &MemoryMetric{
+		cw:        cw,
+		namespace: namespace,
+		dims:      dims,
+	}
 
-	for _ = range poll.C {
+	var memUtil uint64
+
+	for _ = range tic.C {
 		check(mem.Get(), "memGet", true)
 
 		// calculate memory utilization
@@ -120,15 +124,33 @@ func main() {
 			memUtil = 100 * mem.Used / mem.Total
 		}
 
-		input := newInput(namespace,
-			newMetric("MemoryUtilization", time.Now(), "Percent", float64(memUtil), dims...),
-			newMetric("MemoryUsed", time.Now(), "Bytes", float64(mem.Used), dims...),
-			newMetric("MemoryAvailable", time.Now(), "Bytes", float64(mem.Free), dims...),
+		_ = mm.Put(
+			float64(memUtil),
+			float64(mem.Used),
+			float64(mem.Free),
 		)
-
-		_, err := cw.PutMetricData(input)
-		check(err, true) // TODO how to handle error putting metric data, should we just kill the process?
 	}
+}
+
+type MemoryMetric struct {
+	cw *cloudwatch.CloudWatch
+
+	namespace string
+
+	dims []*cloudwatch.Dimension
+}
+
+func (m *MemoryMetric) Put(util, used, free float64) (err error) {
+	defer log.Trace("put").Stop(&err)
+
+	now := time.Now()
+	_, err = m.cw.PutMetricData(newInput(m.namespace,
+		newMetric("MemoryUtilization", now, "Percent", util, m.dims...),
+		newMetric("MemoryUsed", now, "Bytes", used, m.dims...),
+		newMetric("MemoryAvailable", now, "Bytes", free, m.dims...),
+	))
+
+	return
 }
 
 // newMetric returns a new cloudwatch.MetricDatum
