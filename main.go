@@ -5,14 +5,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/apex/log"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/cloudfoundry/gosigar"
-
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -64,7 +63,8 @@ var (
 	period uint64
 	grace  uint64
 
-	// TODO verbose bool
+	log_level string
+
 	// TODO memory_units string
 )
 
@@ -113,10 +113,17 @@ func init() {
 		Short('g').
 		Default("3").
 		Uint64Var(&grace)
+
+	kingpin.Flag("level", "Log Level").
+		Short('l').
+		Default("info").
+		HintOptions("debug", "info", "warn", "error", "fatal").
+		StringVar(&log_level)
 }
 
 func main() {
 	kingpin.Parse()
+	log.SetLevelFromString(log_level)
 
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 	_, err := creds.Get()
