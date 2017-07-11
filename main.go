@@ -138,7 +138,7 @@ func newMetric(
 		"timestamp": t,
 		"unit":      unit,
 		"value":     value,
-	}).Info("New Metric")
+	}).Info("metric")
 
 	return (&cloudwatch.MetricDatum{}).
 		SetMetricName(name).
