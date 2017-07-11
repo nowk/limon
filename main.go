@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -61,6 +62,7 @@ var (
 	namespace string
 
 	period uint64
+	grace  uint64
 
 	// TODO verbose bool
 	// TODO memory_units string
@@ -79,6 +81,7 @@ func init() {
 	nflag.StringVar(&namespace, "NAMESPACE", "namespace", "System/Linux", "The namespace of the metric")
 
 	nflag.Uint64Var(&period, "PERIOD", "period", 5, "The period in seconds which specifies when a metric measurement is take.")
+	nflag.Uint64Var(&grace, "GRACE", "grace", 3, "The number consecutive put errors allowed before forcing an exit 1")
 
 	nflag.Parse()
 }
@@ -114,8 +117,11 @@ func main() {
 		dims:      dims,
 	}
 
-	var memUtil uint64
+	var (
+		memUtil uint64
 
+		i uint64 // retry count
+	)
 	for _ = range tic.C {
 		check(mem.Get(), "memGet", true)
 
@@ -124,11 +130,19 @@ func main() {
 			memUtil = 100 * mem.Used / mem.Total
 		}
 
-		_ = mm.Put(
+		err := mm.Put(
 			float64(memUtil),
 			float64(mem.Used),
 			float64(mem.Free),
 		)
+		if err != nil {
+			i++
+		} else {
+			i = 0 // it's ok, reset the count
+		}
+		if i > grace {
+			check(errors.New("exceeded grace count"), "put", true)
+		}
 	}
 }
 
