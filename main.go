@@ -129,8 +129,11 @@ func main() {
 	kingpin.Parse()
 	log.SetLevelFromString(log_level)
 
+	unit, err := parseMemoryUnit(memory_unit)
+	check(err, "memory unit", true)
+
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
-	_, err := creds.Get()
+	_, err = creds.Get()
 	check(err, "credentials", true)
 
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
@@ -146,9 +149,6 @@ func main() {
 
 	mem := sigar.Mem{}
 	tic := time.NewTicker(time.Duration(period) * time.Second)
-
-	unit, err := parseMemoryUnit(memory_unit)
-	check(err, "memory unit", true)
 
 	log.WithField("namespace", namespace).Info("start")
 
