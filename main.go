@@ -58,7 +58,8 @@ var (
 	autoscaling_group_name string
 	instance_type          string
 	image_id               string
-	namespace              string
+
+	namespace string
 
 	period uint64
 	grace  uint64
