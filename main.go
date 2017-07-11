@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"os"
 	"time"
 
 	"github.com/alecthomas/kingpin"
@@ -41,10 +40,11 @@ func check(err error, label string, exit bool) {
 		return
 	}
 
-	log.WithError(err).Error(label)
-
+	l := log.WithError(err)
 	if exit {
-		os.Exit(1)
+		l.Fatal(label)
+	} else {
+		l.Error(label)
 	}
 }
 
