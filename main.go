@@ -103,6 +103,8 @@ func main() {
 		newDim("ImageId", image_id),
 	)
 
+	log.WithField("namespace", namespace).Info("start")
+
 	var (
 		mem  = sigar.Mem{}
 		poll = time.NewTicker(time.Duration(period) * time.Second)
