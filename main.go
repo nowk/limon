@@ -11,7 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/cloudfoundry/gosigar"
-	"github.com/nowk/nflag"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -52,14 +53,12 @@ var (
 	aws_access_key_id     string
 	aws_secret_access_key string
 	aws_region            string
-	// TODO aws_iam_role string
 
 	instance_id            string
 	autoscaling_group_name string
 	instance_type          string
 	image_id               string
-
-	namespace string
+	namespace              string
 
 	period uint64
 	grace  uint64
@@ -69,24 +68,55 @@ var (
 )
 
 func init() {
-	nflag.StringVar(&aws_access_key_id, "AWS_ACCESS_KEY_ID", "aws-access-key-id", "", "Specifies the AWS access key ID to use to identify the caller.")
-	nflag.StringVar(&aws_secret_access_key, "AWS_SECRET_ACCESS_KEY", "aws-secret-access-key", "", "Specifies the AWS secret key to use to sign the request.")
-	nflag.StringVar(&aws_region, "AWS_REGION", "aws-region", "us-east-1", "Specifies the AWS region.")
+	kingpin.Flag("aws-access-key-id", "AWS Access Key ID").
+		OverrideDefaultFromEnvar("AWS_ACCESS_KEY_ID").
+		Required().
+		StringVar(&aws_access_key_id)
 
-	nflag.StringVar(&instance_id, "INSTANCE_ID", "instance-id", "", "Specifies the InstanceId")
-	nflag.StringVar(&autoscaling_group_name, "AUTOSCALING_GROUP_NAME", "autoscaling-group-name", "", "Specifies the AutoScalingGroupName")
-	nflag.StringVar(&instance_type, "INSTANCE_TYPE", "instance-type", "", "Specifies the InstanceType")
-	nflag.StringVar(&image_id, "IMAGE_ID", "image-id", "", "Specifies the ImageId")
+	kingpin.Flag("aws-secret-access-key", "AWS Secret Key").
+		OverrideDefaultFromEnvar("AWS_SECRET_ACCESS_KEY").
+		Required().
+		StringVar(&aws_secret_access_key)
 
-	nflag.StringVar(&namespace, "NAMESPACE", "namespace", "System/Linux", "The namespace of the metric")
+	kingpin.Flag("aws-region", "AWS Region").
+		OverrideDefaultFromEnvar("AWS_REGION").
+		Default("us-east-1").
+		StringVar(&aws_region)
 
-	nflag.Uint64Var(&period, "PERIOD", "period", 5, "The period in seconds which specifies when a metric measurement is take.")
-	nflag.Uint64Var(&grace, "GRACE", "grace", 3, "The number consecutive put errors allowed before forcing an exit 1")
+	kingpin.Flag("instance-id", "EC2 Instance ID").
+		OverrideDefaultFromEnvar("INSTANCE_ID").
+		StringVar(&instance_id)
 
-	nflag.Parse()
+	kingpin.Flag("autoscaling-group-name", "AutoScaling Group Name").
+		OverrideDefaultFromEnvar("AUTOSCALING_GROUP_NAME").
+		StringVar(&autoscaling_group_name)
+
+	kingpin.Flag("instance-type", "EC2 Instance Type").
+		OverrideDefaultFromEnvar("INSTANCE_TYPE").
+		StringVar(&instance_type)
+
+	kingpin.Flag("image-id", "EC2 Image ID").
+		OverrideDefaultFromEnvar("IMAGE_ID").
+		StringVar(&image_id)
+
+	kingpin.Flag("namespace", "Metric Namespace").
+		Default("System/Linux").
+		StringVar(&namespace)
+
+	kingpin.Flag("period", "Period (in seconds) to take metric measurement").
+		Short('p').
+		Default("5").
+		Uint64Var(&period)
+
+	kingpin.Flag("grace", "Number of consecutive put errors allowed before a forced exit").
+		Short('g').
+		Default("3").
+		Uint64Var(&grace)
 }
 
 func main() {
+	kingpin.Parse()
+
 	var (
 		creds  = credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 		_, err = creds.Get()
