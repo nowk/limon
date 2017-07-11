@@ -227,9 +227,10 @@ func dimsOnly(in ...*cloudwatch.Dimension) []*cloudwatch.Dimension {
 	return out
 }
 
-// newDim returns a new cloudwatch.Dimension. empty values will return nil
+// newDim returns a new cloudwatch.Dimension. empty name or values will return
+// nil
 func newDim(name, value string) *cloudwatch.Dimension {
-	if value == "" {
+	if name == "" || value == "" {
 		return nil
 	}
 
