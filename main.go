@@ -58,14 +58,13 @@ var (
 	instance_type          string
 	image_id               string
 
-	namespace string
+	namespace   string
+	memory_unit string
 
 	period uint64
 	grace  uint64
 
 	log_level string
-
-	// TODO memory_units string
 )
 
 func init() {
@@ -103,6 +102,11 @@ func init() {
 	kingpin.Flag("namespace", "Metric Namespace").
 		Default("System/Linux").
 		StringVar(&namespace)
+
+	kingpin.Flag("unit", "Unit of measurement for raw memory metrics").
+		Default("bytes").
+		HintOptions("bytesp", "kilobytes", "megabytes", "gigabytes").
+		StringVar(&memory_unit)
 
 	kingpin.Flag("period", "Period (in seconds) to take metric measurement").
 		Short('p').
@@ -145,10 +149,14 @@ func main() {
 	mem := sigar.Mem{}
 	tic := time.NewTicker(time.Duration(period) * time.Second)
 
+	unit, err := parseMemoryUnit(memory_unit)
+	check(err, "memory unit", true)
+
 	mm := &MemoryMetric{
-		cw:        cw,
-		namespace: namespace,
-		dims:      dims,
+		cw:         cw,
+		namespace:  namespace,
+		memoryUnit: unit,
+		dims:       dims,
 	}
 
 	var (
@@ -165,9 +173,9 @@ func main() {
 		}
 
 		err := mm.Put(
-			float64(memUtil),
-			float64(mem.Used),
-			float64(mem.Free),
+			memUtil,
+			mem.Used,
+			mem.Free,
 		)
 		if err != nil {
 			i++
@@ -180,43 +188,87 @@ func main() {
 	}
 }
 
+// parseMemoryUnit returns capitalized version of acceptable unites, or returns
+// error
+func parseMemoryUnit(unit string) (string, error) {
+	var out string
+	switch unit {
+	case "bytes":
+		out = "Bytes"
+
+	case "megabytes":
+		out = "Megabytes"
+
+	case "gigabytes":
+		out = "Gigabytes"
+
+	default:
+		return "", errors.New("invalid memory unit")
+	}
+
+	return out, nil
+}
+
 type MemoryMetric struct {
 	cw *cloudwatch.CloudWatch
 
-	namespace string
+	namespace  string
+	memoryUnit string
 
 	dims []*cloudwatch.Dimension
 }
 
-func (m *MemoryMetric) Put(util, used, free float64) (err error) {
+func (m *MemoryMetric) Put(util, used, free uint64) (err error) {
 	defer log.Trace("put").Stop(&err)
 
 	now := time.Now()
 	_, err = m.cw.PutMetricData(newInput(m.namespace,
 		newMetric("MemoryUtilization", now, "Percent", util, m.dims...),
-		newMetric("MemoryUsed", now, "Bytes", used, m.dims...),
-		newMetric("MemoryAvailable", now, "Bytes", free, m.dims...),
+		newMetric("MemoryUsed", now, m.memoryUnit, used, m.dims...),
+		newMetric("MemoryAvailable", now, m.memoryUnit, free, m.dims...),
 	))
 
 	return
 }
 
+func convertValueByUnit(unit string, value uint64) float64 {
+	var v uint64
+	switch unit {
+	case "Bytes", "Percent":
+		v = value
+
+	case "Kilobytes":
+		v = kb(value)
+
+	case "Megabytes":
+		v = mb(value)
+
+	case "Gigabytes":
+		v = gb(value)
+
+	}
+
+	return float64(v)
+}
+
 // newMetric returns a new cloudwatch.MetricDatum
 func newMetric(
-	name string, t time.Time, unit string, value float64, dims ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
+	name string, t time.Time, unit string, value uint64, dims ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
+
+	unitValue := convertValueByUnit(unit, value)
 
 	log.WithFields(log.Fields{
 		"name":      name,
 		"timestamp": t,
 		"unit":      unit,
-		"value":     value,
+		"value":     unitValue,
 	}).Info("metric")
 
 	return (&cloudwatch.MetricDatum{}).
 		SetMetricName(name).
 		SetTimestamp(t).
 		SetUnit(unit).
-		SetValue(value).
+		SetValue(unitValue).
 		SetDimensions(dims)
 }
 
