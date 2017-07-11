@@ -139,6 +139,8 @@ func main() {
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
 	cw := cloudwatch.New(session.New(), cfg)
 
+	log.WithField("namespace", namespace).Info("start")
+
 	// dimensions for our metrics
 	dims := dimsOnly(
 		newDim("InstanceId", instance_id),
@@ -147,11 +149,6 @@ func main() {
 		newDim("ImageId", image_id),
 	)
 
-	mem := sigar.Mem{}
-	tic := time.NewTicker(time.Duration(period) * time.Second)
-
-	log.WithField("namespace", namespace).Info("start")
-
 	metric := &MemoryMetric{
 		cw:         cw,
 		namespace:  namespace,
@@ -159,21 +156,19 @@ func main() {
 		dims:       dims,
 	}
 
-	var (
-		memUtil uint64
+	mem := &Mem{
+		Mem: &sigar.Mem{},
+	}
 
-		i uint64 // retry count
-	)
+	tic := time.NewTicker(time.Duration(period) * time.Second)
+
+	var i uint64 // grace count
+
 	for _ = range tic.C {
 		check(mem.Get(), "memGet", true)
 
-		// calculate memory utilization
-		if mem.Total > 0 {
-			memUtil = 100 * mem.Used / mem.Total
-		}
-
 		err := metric.Put(
-			memUtil,
+			mem.Util,
 			mem.Used,
 			mem.Free,
 		)
@@ -186,6 +181,27 @@ func main() {
 			check(errors.New("exceeded grace count"), "put", true)
 		}
 	}
+}
+
+// Mem wraps sigar.Mem to provide a Util field for a calculated memory
+// utilization
+type Mem struct {
+	*sigar.Mem
+
+	Util uint64
+}
+
+func (m *Mem) Get() error {
+	if err := m.Mem.Get(); err != nil {
+		return err
+	}
+
+	// calculate memory utilization
+	if m.Mem.Total > 0 {
+		m.Util = 100 * m.Mem.Used / m.Mem.Total
+	}
+
+	return nil
 }
 
 // parseMemoryUnit returns capitalized version of acceptable unites, or returns
