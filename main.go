@@ -35,12 +35,12 @@ func gb(val uint64) uint64 {
 }
 
 // check outputs an error to stderr and exits the process if true
-func check(err error, exit bool) {
+func check(err error, label string, exit bool) {
 	if err == nil {
 		return
 	}
 
-	log.WithError(err).Error("Error")
+	log.WithError(err).Error(label)
 
 	if exit {
 		os.Exit(1)
@@ -88,7 +88,7 @@ func main() {
 		creds  = credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 		_, err = creds.Get()
 	)
-	check(err, true)
+	check(err, "credentials", true)
 
 	var (
 		cfg = aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
@@ -111,7 +111,7 @@ func main() {
 	)
 
 	for _ = range poll.C {
-		check(mem.Get(), true)
+		check(mem.Get(), "memGet", true)
 
 		// calculate memory utilization
 		if mem.Total > 0 {
