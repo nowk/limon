@@ -144,13 +144,13 @@ func main() {
 		newDim("ImageId", image_id),
 	)
 
-	log.WithField("namespace", namespace).Info("start")
-
 	mem := sigar.Mem{}
 	tic := time.NewTicker(time.Duration(period) * time.Second)
 
 	unit, err := parseMemoryUnit(memory_unit)
 	check(err, "memory unit", true)
+
+	log.WithField("namespace", namespace).Info("start")
 
 	metric := &MemoryMetric{
 		cw:         cw,
