@@ -105,7 +105,7 @@ func init() {
 
 	kingpin.Flag("unit", "Unit of measurement for raw memory metrics").
 		Default("bytes").
-		HintOptions("bytesp", "kilobytes", "megabytes", "gigabytes").
+		HintOptions("bytes", "kilobytes", "megabytes", "gigabytes").
 		StringVar(&memory_unit)
 
 	kingpin.Flag("period", "Period (in seconds) to take metric measurement").
