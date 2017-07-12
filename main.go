@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/nowk/limon/mem"
+	"github.com/nowk/limon/metrics/dimensions"
 	"github.com/nowk/limon/metrics/memory"
 	"github.com/nowk/limon/utils"
 )
@@ -118,11 +119,13 @@ func main() {
 	log.WithField("namespace", namespace).Info("start")
 
 	// dimensions for our metrics
-	dims := dimsOnly(
-		newDim("InstanceId", instance_id),
-		newDim("AutoScalingGroupName", autoscaling_group_name),
-		newDim("InstanceType", instance_type),
-		newDim("ImageId", image_id),
+	dims := dimensions.FromSet(
+		[][]string{
+			{"InstanceId", instance_id},
+			{"AutoScalingGroupName", autoscaling_group_name},
+			{"InstanceType", instance_type},
+			{"ImageId", image_id},
+		},
 	)
 
 	memoryMetric := memory.New(cw, namespace, unit, dims...)
@@ -149,31 +152,4 @@ func main() {
 			check(errors.New("exceeded grace count"), "put")
 		}
 	}
-}
-
-// dimsOnly pops out nil and returns only valid dimensions
-func dimsOnly(in ...*cloudwatch.Dimension) []*cloudwatch.Dimension {
-	var out []*cloudwatch.Dimension
-
-	for _, v := range in {
-		if v == nil {
-			continue
-		}
-
-		out = append(out, v)
-	}
-
-	return out
-}
-
-// newDim returns a new cloudwatch.Dimension. empty name or values will return
-// nil
-func newDim(name, value string) *cloudwatch.Dimension {
-	if name == "" || value == "" {
-		return nil
-	}
-
-	return (&cloudwatch.Dimension{}).
-		SetName(name).
-		SetValue(value)
 }
