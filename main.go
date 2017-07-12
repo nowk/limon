@@ -108,11 +108,13 @@ func main() {
 
 	// parse memory unit early
 	unit, err := utils.ParseMemoryUnit(memory_unit)
+
 	check(err, "memory unit")
 
 	// aws session and cloudwatch
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 	_, err = creds.Get()
+
 	check(err, "credentials")
 
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
