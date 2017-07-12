@@ -106,9 +106,11 @@ func main() {
 	kingpin.Parse()
 	log.SetLevelFromString(log_level)
 
+	// parse memory unit early
 	unit, err := utils.ParseMemoryUnit(memory_unit)
 	check(err, "memory unit")
 
+	// aws session and cloudwatch
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 	_, err = creds.Get()
 	check(err, "credentials")
@@ -116,6 +118,7 @@ func main() {
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
 	cw := cloudwatch.New(session.New(), cfg)
 
+	// start!
 	log.WithField("namespace", namespace).Info("start")
 
 	// dimensions for our metrics
@@ -127,14 +130,13 @@ func main() {
 			{"ImageId", image_id},
 		},
 	)
+	var (
+		memoryMetric = memory.New(cw, namespace, unit, dims...)
+		mem          = mem.New()
+		tic          = time.NewTicker(time.Duration(period) * time.Second)
 
-	memoryMetric := memory.New(cw, namespace, unit, dims...)
-
-	mem := mem.New()
-	tic := time.NewTicker(time.Duration(period) * time.Second)
-
-	var i uint64 // grace count
-
+		i uint64 // grace count
+	)
 	for _ = range tic.C {
 		check(mem.Get(), "memGet")
 
