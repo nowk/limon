@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/nowk/limon/mem"
-	metricsmemory "github.com/nowk/limon/metrics/memory"
+	"github.com/nowk/limon/metrics/memory"
 	"github.com/nowk/limon/utils"
 )
 
@@ -125,7 +125,7 @@ func main() {
 		newDim("ImageId", image_id),
 	)
 
-	metric := metricsmemory.New(cw, namespace, unit, dims...)
+	memoryMetric := memory.New(cw, namespace, unit, dims...)
 
 	mem := mem.New()
 	tic := time.NewTicker(time.Duration(period) * time.Second)
@@ -135,7 +135,7 @@ func main() {
 	for _ = range tic.C {
 		check(mem.Get(), "memGet")
 
-		err := metric.Put(
+		err := memoryMetric.Put(
 			mem.Util,
 			mem.Used,
 			mem.Free,
