@@ -50,6 +50,7 @@ func New(
 	}
 }
 
+// Put sends the metric data to cloudwatch in the context of the given Metric
 func (m *Metric) Put(util, used, free uint64) (err error) {
 	defer log.Trace("put").Stop(&err)
 
