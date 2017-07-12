@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/nowk/limon/mem"
-	"github.com/nowk/limon/metrics/dimensions"
+	"github.com/nowk/limon/metrics/dimension"
 	"github.com/nowk/limon/metrics/memory"
 	"github.com/nowk/limon/utils"
 )
@@ -122,7 +122,7 @@ func main() {
 	log.WithField("namespace", namespace).Info("start")
 
 	// dimensions for our metrics
-	dims := dimensions.FromSet(
+	dims := dimension.FromSet(
 		[][]string{
 			{"InstanceId", instance_id},
 			{"AutoScalingGroupName", autoscaling_group_name},

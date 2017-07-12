@@ -1,4 +1,4 @@
-package dimensions
+package dimension
 
 import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
