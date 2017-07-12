@@ -15,13 +15,13 @@ import (
 	"github.com/nowk/limon/utils"
 )
 
-// check outputs an error to stderr and exits the process if true
+// check outputs an error to stderr and exits the process
 func check(err error, label string) {
 	if err == nil {
 		return
 	}
 
-	log.WithError(err).Error(label)
+	log.WithError(err).Fatal(label)
 }
 
 var (
