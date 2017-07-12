@@ -12,20 +12,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/nowk/limon/mem"
 	metricsmemory "github.com/nowk/limon/metrics/memory"
+	"github.com/nowk/limon/utils"
 )
 
 // check outputs an error to stderr and exits the process if true
-func check(err error, label string, exit bool) {
+func check(err error, label string) {
 	if err == nil {
 		return
 	}
 
-	l := log.WithError(err)
-	if exit {
-		l.Fatal(label)
-	} else {
-		l.Error(label)
-	}
+	log.WithError(err).Error(label)
 }
 
 var (
@@ -109,12 +105,12 @@ func main() {
 	kingpin.Parse()
 	log.SetLevelFromString(log_level)
 
-	unit, err := parseMemoryUnit(memory_unit)
-	check(err, "memory unit", true)
+	unit, err := utils.ParseMemoryUnit(memory_unit)
+	check(err, "memory unit")
 
 	creds := credentials.NewStaticCredentials(aws_access_key_id, aws_secret_access_key, "")
 	_, err = creds.Get()
-	check(err, "credentials", true)
+	check(err, "credentials")
 
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
 	cw := cloudwatch.New(session.New(), cfg)
@@ -137,7 +133,7 @@ func main() {
 	var i uint64 // grace count
 
 	for _ = range tic.C {
-		check(mem.Get(), "memGet", true)
+		check(mem.Get(), "memGet")
 
 		err := metric.Put(
 			mem.Util,
@@ -150,30 +146,9 @@ func main() {
 			i = 0 // it's ok, reset the count
 		}
 		if i > grace {
-			check(errors.New("exceeded grace count"), "put", true)
+			check(errors.New("exceeded grace count"), "put")
 		}
 	}
-}
-
-// parseMemoryUnit returns capitalized version of acceptable unites, or returns
-// error
-func parseMemoryUnit(unit string) (string, error) {
-	var out string
-	switch unit {
-	case "bytes":
-		out = "Bytes"
-
-	case "megabytes":
-		out = "Megabytes"
-
-	case "gigabytes":
-		out = "Gigabytes"
-
-	default:
-		return "", errors.New("invalid memory unit")
-	}
-
-	return out, nil
 }
 
 // dimsOnly pops out nil and returns only valid dimensions
