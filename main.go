@@ -10,29 +10,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
-	"github.com/cloudfoundry/gosigar"
+	"github.com/nowk/limon/mem"
+	metricsmemory "github.com/nowk/limon/metrics/memory"
 )
-
-const (
-	KILO = 1024
-	MEGA = 1048576
-	GIGA = 1073741824
-)
-
-// kb returns the value in kilobytes
-func kb(val uint64) uint64 {
-	return val / KILO
-}
-
-// mb returns the value in megabytes
-func mb(val uint64) uint64 {
-	return val / MEGA
-}
-
-// gb returns the value in gigabytes
-func gb(val uint64) uint64 {
-	return val / GIGA
-}
 
 // check outputs an error to stderr and exits the process if true
 func check(err error, label string, exit bool) {
@@ -149,17 +129,9 @@ func main() {
 		newDim("ImageId", image_id),
 	)
 
-	metric := &MemoryMetric{
-		cw:         cw,
-		namespace:  namespace,
-		memoryUnit: unit,
-		dims:       dims,
-	}
+	metric := metricsmemory.New(cw, namespace, unit, dims...)
 
-	mem := &Mem{
-		Mem: &sigar.Mem{},
-	}
-
+	mem := mem.New()
 	tic := time.NewTicker(time.Duration(period) * time.Second)
 
 	var i uint64 // grace count
@@ -183,27 +155,6 @@ func main() {
 	}
 }
 
-// Mem wraps sigar.Mem to provide a Util field for a calculated memory
-// utilization
-type Mem struct {
-	*sigar.Mem
-
-	Util uint64
-}
-
-func (m *Mem) Get() error {
-	if err := m.Mem.Get(); err != nil {
-		return err
-	}
-
-	// calculate memory utilization
-	if m.Mem.Total > 0 {
-		m.Util = 100 * m.Mem.Used / m.Mem.Total
-	}
-
-	return nil
-}
-
 // parseMemoryUnit returns capitalized version of acceptable unites, or returns
 // error
 func parseMemoryUnit(unit string) (string, error) {
@@ -223,71 +174,6 @@ func parseMemoryUnit(unit string) (string, error) {
 	}
 
 	return out, nil
-}
-
-type MemoryMetric struct {
-	cw *cloudwatch.CloudWatch
-
-	namespace  string
-	memoryUnit string
-
-	dims []*cloudwatch.Dimension
-}
-
-func (m *MemoryMetric) Put(util, used, free uint64) (err error) {
-	defer log.Trace("put").Stop(&err)
-
-	now := time.Now()
-	_, err = m.cw.PutMetricData(newInput(m.namespace,
-		newMetric("MemoryUtilization", now, "Percent", util, m.dims...),
-		newMetric("MemoryUsed", now, m.memoryUnit, used, m.dims...),
-		newMetric("MemoryAvailable", now, m.memoryUnit, free, m.dims...),
-	))
-
-	return
-}
-
-// convertValueByUnit converts the value by supported unit. Bytes and Percent
-// unit types will be returned unconverted
-func convertValueByUnit(unit string, value uint64) float64 {
-	var v uint64
-	switch unit {
-	case "Bytes", "Percent":
-		v = value
-
-	case "Kilobytes":
-		v = kb(value)
-
-	case "Megabytes":
-		v = mb(value)
-
-	case "Gigabytes":
-		v = gb(value)
-
-	}
-
-	return float64(v)
-}
-
-// newMetric returns a new cloudwatch.MetricDatum
-func newMetric(
-	name string, t time.Time, unit string, value uint64, dims ...*cloudwatch.Dimension) *cloudwatch.MetricDatum {
-
-	unitValue := convertValueByUnit(unit, value)
-
-	log.WithFields(log.Fields{
-		"name":      name,
-		"timestamp": t,
-		"unit":      unit,
-		"value":     unitValue,
-	}).Info("metric")
-
-	return (&cloudwatch.MetricDatum{}).
-		SetMetricName(name).
-		SetTimestamp(t).
-		SetUnit(unit).
-		SetValue(unitValue).
-		SetDimensions(dims)
 }
 
 // dimsOnly pops out nil and returns only valid dimensions
@@ -315,14 +201,4 @@ func newDim(name, value string) *cloudwatch.Dimension {
 	return (&cloudwatch.Dimension{}).
 		SetName(name).
 		SetValue(value)
-}
-
-// newInput returns a new cloudwatch.PutMetricDataInput
-func newInput(
-	ns string, datum ...*cloudwatch.MetricDatum) *cloudwatch.PutMetricDataInput {
-
-	return (&cloudwatch.PutMetricDataInput{}).
-		SetNamespace(ns).
-		SetMetricData(datum)
-
 }
