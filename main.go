@@ -95,7 +95,7 @@ func init() {
 		Default("3").
 		Uint64Var(&grace)
 
-	kingpin.Flag("level", "Log Level").
+	kingpin.Flag("level", "Log Level. This also controls verbosity").
 		Short('l').
 		Default("info").
 		HintOptions("debug", "info", "warn", "error", "fatal").
