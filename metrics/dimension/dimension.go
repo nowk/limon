@@ -4,21 +4,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 )
 
-// FromSet returns an array of Dimensons form a set of name:value pairs. This
-// skips any pair that has a blank name or value
-func FromSet(set [][]string) []*cloudwatch.Dimension {
+// FromMap returns an array of Dimensons from a map and skips any key:value
+// pair that has a blank key or value, or if the value is not a string type
+func FromMap(m map[string]interface{}) []*cloudwatch.Dimension {
 	var dims []*cloudwatch.Dimension
 
-	for _, v := range set {
-		var (
-			name  = v[0]
-			value = v[1]
-		)
-		if name == "" || value == "" {
+	for k, v := range m {
+		val, ok := v.(string)
+		if !ok {
+			continue
+		}
+		if k == "" || val == "" {
 			continue
 		}
 
-		dims = append(dims, New(name, value))
+		dims = append(dims, New(k, val))
 	}
 
 	return dims

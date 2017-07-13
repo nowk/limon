@@ -120,19 +120,19 @@ func main() {
 	cfg := aws.NewConfig().WithRegion(aws_region).WithCredentials(creds)
 	cw := cloudwatch.New(session.New(), cfg)
 
-	// start!
-	log.WithField("namespace", namespace).Info("start")
+	dimMap := map[string]interface{}{
+		"InstanceId":           instance_id,
+		"AutoScalingGroupName": autoscaling_group_name,
+		"InstanceType":         instance_type,
+		"ImageId":              image_id,
+	}
 
-	// dimensions for our metrics
-	dims := dimension.FromSet(
-		[][]string{
-			{"InstanceId", instance_id},
-			{"AutoScalingGroupName", autoscaling_group_name},
-			{"InstanceType", instance_type},
-			{"ImageId", image_id},
-		},
-	)
+	log.WithField("namespace", namespace).
+		WithFields(log.Fields(dimMap)).
+		Info("start")
+
 	var (
+		dims         = dimension.FromMap(dimMap)
 		memoryMetric = memory.New(cw, namespace, unit, dims...)
 		mem          = mem.New()
 		tic          = time.NewTicker(time.Duration(period) * time.Second)
